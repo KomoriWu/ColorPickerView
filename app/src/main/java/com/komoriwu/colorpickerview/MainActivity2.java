@@ -13,7 +13,7 @@ public class MainActivity2 extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        RotatView rotatView=(RotatView)findViewById(R.id.myRotatView);
-        rotatView.setRotatDrawableResource(R.mipmap.color);
+//        RotatView rotatView=(RotatView)findViewById(R.id.myRotatView);
+//        rotatView.setRotatDrawableResource(R.mipmap.color);
     }
 }
