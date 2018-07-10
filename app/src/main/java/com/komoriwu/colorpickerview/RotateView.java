@@ -36,10 +36,20 @@ public class RotateView extends View {
     //取色盘画笔
     private Paint mPaint;
     //当前颜色值的小球
-    private Paint mCenterPaint;
+    private Paint mPaintMini;
+    //背景圆
+    private Paint mPaintBG;
+    //画线
+    private Paint mPaintLine;
     private int[] mColors;
-    private float mRadius;
-    private static final int CENTER_RADIUS = 30;
+    //取色盘半径
+    private float mRadiusColor;
+    //背景圆半径
+    private float mRadiusBg;
+    //线的长度
+    private float mLineLength;
+    //小圆圆心y坐标
+    private float mMiniY;
     private static final float PI = 3.1415926f;
 
     public RotateView(Context context) {
@@ -59,7 +69,7 @@ public class RotateView extends View {
             int attr = a.getIndex(i);
             switch (attr) {
                 case R.styleable.ColorPickerView_radius:
-                    mRadius = a.getDimensionPixelSize(attr, 0);
+                    mRadiusColor = a.getDimensionPixelSize(attr, 0);
                     break;
             }
         }
@@ -77,30 +87,48 @@ public class RotateView extends View {
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaint.setShader(s);
         mPaint.setStyle(Paint.Style.STROKE);
-        mPaint.setStrokeWidth(mRadius/2.5f);
+        mPaint.setStrokeWidth(mRadiusColor / 2.5f);
 
-        mCenterPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mCenterPaint.setColor(0xFF000000);
-        mCenterPaint.setStrokeWidth(5);
+        mPaintMini = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mPaintMini.setColor(0xFFcccccc);
+        mPaintMini.setStrokeWidth(mRadiusColor / 10);
+
+        mPaintLine = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mPaintLine.setStyle(Paint.Style.STROKE);
+        mPaintLine.setColor(0xFFcccccc);
+        mPaintLine.setStrokeWidth(4);
+
+        mPaintBG = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mPaintBG.setStyle(Paint.Style.STROKE);
+        mPaintBG.setColor(0xFFefefef);
+        mPaintBG.setStrokeWidth(mRadiusColor / 12);
 
         initSize();
     }
 
     private void initSize() {
-        width = mRadius * 2;
-        height = mRadius * 2;
+        width = mRadiusColor * 2;
+        height = mRadiusColor * 2;
 
         maxwidth = Math.sqrt(width * width + height * height);
         o_x = o_y = (float) (maxwidth / 2);//确定圆心坐标
+
+        mRadiusBg = mRadiusColor + (mPaint.getStrokeWidth() + mPaintBG.getStrokeWidth()) / 2;
+        mLineLength = mRadiusColor + mPaint.getStrokeWidth() + mPaintBG.getStrokeWidth();
+        mMiniY = -(mLineLength + mPaintMini.getStrokeWidth() / 2);
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         canvas.translate(getWidth() / 2, getHeight() / 2);
         canvas.rotate(deta_degree);
-        canvas.drawCircle(0, 0, mRadius, mPaint);
-        canvas.drawCircle(0, 0, CENTER_RADIUS, mCenterPaint);
-
+        canvas.drawCircle(0, 0, mRadiusColor, mPaint);
+        //重置画布画线，为了将线画在view最上面
+        canvas.rotate(-deta_degree);
+        canvas.drawCircle(0, 0, mRadiusBg, mPaintBG);
+        canvas.drawLine(0, 0, 0, -mLineLength, mPaintLine);
+        canvas.drawCircle(0, mMiniY, mPaintBG.getStrokeWidth(), mPaintMini);
+        canvas.drawCircle(0, mMiniY, mPaintBG.getStrokeWidth(), mPaintLine);
         super.onDraw(canvas);
     }
 
@@ -108,7 +136,8 @@ public class RotateView extends View {
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        setMeasuredDimension((int) maxwidth, (int) maxwidth);
+        setMeasuredDimension((int) maxwidth, (int) (Math.abs(mMiniY) + mPaintMini.
+                getStrokeWidth()) * 2);
     }
 
     /**
@@ -158,11 +187,17 @@ public class RotateView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        down_x = event.getX();
+        down_y = event.getY();
+        float x = down_x - o_x;
+        float y = down_y - o_y;
+        if (java.lang.Math.hypot(x, y) > mRadiusBg) {
+            //判断触摸点是否在圆内
+            return false;
+        }
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN: {
-                down_x = event.getX();
-                down_y = event.getY();
                 current_degree = detaDegree(o_x, o_y, down_x, down_y);
                 break;
 
@@ -186,21 +221,21 @@ public class RotateView extends View {
                 Log.d(TAG, "deta_degree:" + deta_degree);
 
                 if (deta_degree < 0) {
-                    x = -(float) (mRadius * Math.sin(PI * deta_degree / 180));
-                    y = -(float) (mRadius * Math.cos(PI * deta_degree / 180));
+                    x = -(float) (mRadiusColor * Math.sin(PI * deta_degree / 180));
+                    y = -(float) (mRadiusColor * Math.cos(PI * deta_degree / 180));
                 } else {
                     if (deta_degree < 90) { //取原本二象限的值
-                        x = -(float) (mRadius * Math.sin(PI * deta_degree / 180));
-                        y = -(float) (mRadius * Math.cos(PI * deta_degree / 180));
+                        x = -(float) (mRadiusColor * Math.sin(PI * deta_degree / 180));
+                        y = -(float) (mRadiusColor * Math.cos(PI * deta_degree / 180));
                     } else if (deta_degree < 180) { //取原本三象限的值
-                        y = (float) (mRadius * Math.sin(PI * (deta_degree - 90) / 180));
-                        x = -(float) (mRadius * Math.cos(PI * (deta_degree - 90) / 180));
+                        y = (float) (mRadiusColor * Math.sin(PI * (deta_degree - 90) / 180));
+                        x = -(float) (mRadiusColor * Math.cos(PI * (deta_degree - 90) / 180));
                     } else if (deta_degree < 270) { //取原本四象限的值
-                        x = (float) (mRadius * Math.sin(PI * (deta_degree - 180) / 180));
-                        y = (float) (mRadius * Math.cos(PI * (deta_degree - 180) / 180));
+                        x = (float) (mRadiusColor * Math.sin(PI * (deta_degree - 180) / 180));
+                        y = (float) (mRadiusColor * Math.cos(PI * (deta_degree - 180) / 180));
                     } else if (deta_degree < 360) { //取原本-象限的值
-                        y = -(float) (mRadius * Math.sin(PI * (deta_degree - 270) / 180));
-                        x = (float) (mRadius * Math.cos(PI * (deta_degree - 270) / 180));
+                        y = -(float) (mRadiusColor * Math.sin(PI * (deta_degree - 270) / 180));
+                        x = (float) (mRadiusColor * Math.cos(PI * (deta_degree - 270) / 180));
                     }
                 }
                 Log.d(TAG, "x:" + x + "----" + "y:" + y);
@@ -209,7 +244,7 @@ public class RotateView extends View {
                 if (unit < 0) {
                     unit += 1;
                 }
-                mCenterPaint.setColor(interpColor(mColors, unit));
+                mPaintMini.setColor(interpColor(mColors, unit));
                 postInvalidate();
                 break;
             }
